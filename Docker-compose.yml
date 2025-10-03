@@ -1,0 +1,89 @@
+services:
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: RabbitMQ
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: user
+      RABBITMQ_DEFAULT_PASS: password
+    restart: unless-stopped
+
+  reporting-db:
+    image: postgres:15-alpine
+    container_name: Reporting-DB
+    environment:
+      POSTGRES_DB: reporting_db
+      POSTGRES_USER: reporting_user
+      POSTGRES_PASSWORD: reporting_password
+    ports:
+      - "5434:5432"
+    volumes:
+      - reporting_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reporting_user -d reporting_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+#  admin-reporting:
+#    build: .
+#    environment:
+#      SPRING_DATASOURCE_URL: jdbc:postgresql://reporting-db:5432/reporting_db
+#      SPRING_DATASOURCE_USERNAME: reporting_user
+#      SPRING_DATASOURCE_PASSWORD: reporting_password
+#      APP_JWT_ISS: http://auth-service:8080
+#      APP_JWT_AUD: admin-service
+#      SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: ""
+#      APP_JWT_HS256_SECRET: 5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437
+#      MQ_HOST: rabbitmq
+#      REDIS_HOST: redis
+#    depends_on:
+#      - reporting-db
+#      - rabbitmq
+#      - redis
+#    ports:
+#      - "8085:8085"
+#    restart: unless-stopped
+#
+#  prometheus:
+#    image: prom/prometheus:latest
+#    container_name: prometheus
+#    ports:
+#      - "9090:9090"
+#    volumes:
+#      - ./ops/prometheus.yml:/etc/prometheus/prometheus.yml
+#    restart: unless-stopped
+#    depends_on:
+#      - admin-reporting
+#
+#  grafana:
+#    image: grafana/grafana-oss:latest
+#    container_name: grafana
+#    ports:
+#      - "3000:3000"
+#    environment:
+#      - GF_SECURITY_ADMIN_USER=admin
+#      - GF_SECURITY_ADMIN_PASSWORD=admin
+#    volumes:
+#      - ./ops/grafana/provisioning:/etc/grafana/provisioning
+#    restart: unless-stopped
+#    depends_on:
+#      - prometheus
+
+volumes:
+  reporting_db_data: {}

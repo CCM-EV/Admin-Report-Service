@@ -1,0 +1,63 @@
+server:
+  port: 8085
+  forward-headers-strategy: native
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5434/reporting_db}
+    username: ${SPRING_DATASOURCE_USERNAME:reporting_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:reporting_password}
+    driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
+  rabbitmq:
+    host: ${MQ_HOST:localhost}
+    port: ${MQ_PORT:5672}
+    username: ${MQ_USERNAME:user}
+    password: ${MQ_PASSWORD:password}
+    virtual-host: ${MQ_VHOST:/}
+    connection-timeout: 10000
+    requested-heartbeat: 60
+    listener:
+      simple:
+        retry:
+          enabled: true
+          initial-interval: 3000
+          max-attempts: 3
+          max-interval: 10000
+          multiplier: 2
+        acknowledge-mode: auto
+        prefetch: 100
+        concurrency: 2
+        max-concurrency: 8
+        missing-queues-fatal: false
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+    probes:
+      enabled: true
+
+app:
+  security:
+    jwt:
+      issuer: ${APP_JWT_ISS:http://localhost:8080}
+      audience: ${APP_JWT_AUD:admin-service}
+      jwk-set-uri: ${SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI:}
+      hmacSecret: ${APP_JWT_HS256_SECRET:5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437}
+      blacklistKeyPrefix: "bl:jti:"
+      clockSkewSec: 60
+
+cors:
+  allowed-origins: # url of frontend application
+  allowed-headers: "*"
+  allowed-methods: "GET,POST,PUT,DELETE,OPTIONS"
