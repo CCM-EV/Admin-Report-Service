@@ -54,6 +54,7 @@ create table if not exists fact_trade(
     primary key (order_id, executed_at)
 ) partition by range (executed_at);
 
+
 -- Create initial partitions (current month and next 3 months)
 create table if not exists fact_trade_2024_11 partition of fact_trade
     for values from ('2024-11-01') to ('2024-12-01');

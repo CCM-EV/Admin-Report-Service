@@ -3,6 +3,17 @@ server:
   forward-headers-strategy: native
 
 spring:
+  task:
+    scheduling:
+      enabled: true
+      pool:
+        size: 5
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate.format_sql: true
+      hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5434/reporting_db}
     username: ${SPRING_DATASOURCE_USERNAME:reporting_user}
@@ -10,6 +21,8 @@ spring:
     driver-class-name: org.postgresql.Driver
   flyway:
     enabled: true
+    locations: classpath:db.migration
+    baseline-on-migrate: true
   rabbitmq:
     host: ${MQ_HOST:localhost}
     port: ${MQ_PORT:5672}
@@ -40,7 +53,7 @@ management:
   endpoints:
     web:
       exposure:
-        include: "*"
+        include: "health,info,prometheus,metrics"
   endpoint:
     health:
       show-details: always
@@ -56,8 +69,26 @@ app:
       hmacSecret: ${APP_JWT_HS256_SECRET:5367566B59703373367639792F423F4528482B4D6251655468576D5A71347437}
       blacklistKeyPrefix: "bl:jti:"
       clockSkewSec: 60
+  rabbitmq:
+    queues:
+      user-events: admin.user.events
+      trade-events: admin.trade.events
+      issuance-events: admin.issuance.events
+      payment-events: admin.payment.events
+    exchanges:
+      events: events.exchange
+    routing-keys:
+      user-registered: user.registered
+      user-logged-in: user.logged-in
+      user-updated: user.updated
+      user-deleted: user.deleted
+      trade-executed: trade.executed
+      issuance-approved: issuance.approved
+      payment-completed: payment.completed
+      payment-failed: payment.failed
 
 cors:
   allowed-origins: # url of frontend application
   allowed-headers: "*"
   allowed-methods: "GET,POST,PUT,DELETE,OPTIONS"
+

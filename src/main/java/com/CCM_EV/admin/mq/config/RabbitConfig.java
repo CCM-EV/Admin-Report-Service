@@ -17,27 +17,35 @@ public class RabbitConfig {
     @Bean TopicExchange events() { return new TopicExchange(EX_EVENTS, true, false); }
     @Bean TopicExchange dlx()    { return new TopicExchange(EX_DLX, true, false); }
 
-    // Queues for marketplace service
-    @Bean Queue qTrade()    { return QueueBuilder.durable("admin.trade-executed.v1").withArgument("x-dead-letter-exchange", EX_DLX).build(); }
-    @Bean Queue qPayment()  { return QueueBuilder.durable("admin.payment-completed.v1").withArgument("x-dead-letter-exchange", EX_DLX).build(); }
-    
-    // Queues for carbon module
-    @Bean Queue qIssuance() { return QueueBuilder.durable("admin.credit-issued.v1").withArgument("x-dead-letter-exchange", EX_DLX).build(); }
-    
-    // Queues for auth service
-    @Bean Queue qUserRegistered() { return QueueBuilder.durable("admin.user-registered.v1").withArgument("x-dead-letter-exchange", EX_DLX).build(); }
-    @Bean Queue qUserLoggedIn()   { return QueueBuilder.durable("admin.user-loggedin.v1").withArgument("x-dead-letter-exchange", EX_DLX).build(); }
+    // Queues for different services
+    @Bean Queue qUserEvents()     { return QueueBuilder.durable("admin.user.events").withArgument("x-dead-letter-exchange", EX_DLX).build(); }
+    @Bean Queue qTradeEvents()    { return QueueBuilder.durable("admin.trade.events").withArgument("x-dead-letter-exchange", EX_DLX).build(); }
+    @Bean Queue qIssuanceEvents() { return QueueBuilder.durable("admin.issuance.events").withArgument("x-dead-letter-exchange", EX_DLX).build(); }
+    @Bean Queue qPaymentEvents()  { return QueueBuilder.durable("admin.payment.events").withArgument("x-dead-letter-exchange", EX_DLX).build(); }
 
-    // Bindings for marketplace service
-    @Bean Binding bTrade()    { return BindingBuilder.bind(qTrade()).to(events()).with("marketplace.trade.executed.v1"); }
-    @Bean Binding bPayment()  { return BindingBuilder.bind(qPayment()).to(events()).with("marketplace.payment.completed.v1"); }
+    // Bindings - User events from Auth service
+    @Bean Binding bUserRegistered() { return BindingBuilder.bind(qUserEvents()).to(events()).with("auth.user.registered"); }
+    @Bean Binding bUserLoggedIn()   { return BindingBuilder.bind(qUserEvents()).to(events()).with("auth.user.loggedin"); }
+    @Bean Binding bUserUpdated()    { return BindingBuilder.bind(qUserEvents()).to(events()).with("auth.user.updated"); }
+    @Bean Binding bUserDeleted()    { return BindingBuilder.bind(qUserEvents()).to(events()).with("auth.user.deleted"); }
     
-    // Bindings for carbon module
-    @Bean Binding bIssuance() { return BindingBuilder.bind(qIssuance()).to(events()).with("carbon.credit.issued.v1"); }
+    // Bindings - Trade events from Marketplace service
+    @Bean Binding bTradeCreated()    { return BindingBuilder.bind(qTradeEvents()).to(events()).with("marketplace.trade.created"); }
+    @Bean Binding bTradeUpdated()    { return BindingBuilder.bind(qTradeEvents()).to(events()).with("marketplace.trade.updated"); }
+    @Bean Binding bTradeCompleted()  { return BindingBuilder.bind(qTradeEvents()).to(events()).with("marketplace.trade.completed"); }
+    @Bean Binding bTradeCancelled()  { return BindingBuilder.bind(qTradeEvents()).to(events()).with("marketplace.trade.cancelled"); }
     
-    // Bindings for auth service
-    @Bean Binding bUserRegistered() { return BindingBuilder.bind(qUserRegistered()).to(events()).with("auth.user.registered.v1"); }
-    @Bean Binding bUserLoggedIn()   { return BindingBuilder.bind(qUserLoggedIn()).to(events()).with("auth.user.loggedin.v1"); }
+    // Bindings - Issuance events from Carbon service
+    @Bean Binding bIssuanceApproved() { return BindingBuilder.bind(qIssuanceEvents()).to(events()).with("carbon.issuance.approved"); }
+    @Bean Binding bCreditRequested()  { return BindingBuilder.bind(qIssuanceEvents()).to(events()).with("carbon.credit.requested"); }
+    @Bean Binding bCreditIssued()     { return BindingBuilder.bind(qIssuanceEvents()).to(events()).with("carbon.credit.issued"); }
+    @Bean Binding bCreditRejected()   { return BindingBuilder.bind(qIssuanceEvents()).to(events()).with("carbon.credit.rejected"); }
+    
+    // Bindings - Payment events from Payment service
+    // Matches Payment publisher routing keys: payment.payment.created|success|failed
+    @Bean Binding bPaymentCreated()  { return BindingBuilder.bind(qPaymentEvents()).to(events()).with("payment.payment.created"); }
+    @Bean Binding bPaymentSuccess()  { return BindingBuilder.bind(qPaymentEvents()).to(events()).with("payment.payment.success"); }
+    @Bean Binding bPaymentFailed()   { return BindingBuilder.bind(qPaymentEvents()).to(events()).with("payment.payment.failed"); }
 
     @Bean public MessageConverter jackson2MessageConverter(ObjectMapper om){ return new Jackson2JsonMessageConverter(om); }
 
