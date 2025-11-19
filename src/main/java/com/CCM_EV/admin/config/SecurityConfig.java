@@ -34,8 +34,9 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "CVA")
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth
                         .jwt(jwt -> {
@@ -68,8 +69,14 @@ public class SecurityConfig {
         conv.setJwtGrantedAuthoritiesConverter(jwt -> {
             var out = new java.util.ArrayList<>(scopes.convert(jwt));
             var roles = jwt.getClaimAsStringList("roles");
-            if (roles != null) for (var r : roles)
-                out.add(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + r));
+            if (roles != null) {
+                for (var r : roles)
+                    out.add(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + r));
+            } else {
+                var singleRole = jwt.getClaimAsString("role");
+                if (singleRole != null)
+                    out.add(new org.springframework.security.core.authority.SimpleGrantedAuthority("ROLE_" + singleRole));
+            }
             return out;
         });
            return conv;

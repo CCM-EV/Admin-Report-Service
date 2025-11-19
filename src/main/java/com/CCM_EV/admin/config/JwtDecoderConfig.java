@@ -1,15 +1,19 @@
 package com.CCM_EV.admin.config;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
+import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.*;
+import org.springframework.web.client.RestOperations;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -26,11 +30,20 @@ public class JwtDecoderConfig {
             @Value("${app.security.jwt.issuer}") String issuer,
             @Value("${app.security.jwt.audience}") String audience,
             @Value("${app.security.jwt.hmacSecret:}") String hsSecret,
-            @Value("${app.security.jwt.clockSkewSec:60}") long skew) {
-
+            @Value("${app.security.jwt.clockSkewSec:60}") long skew,
+            RestOperations jwtRestOps
+    )
+    {
         NimbusJwtDecoder dec;
-        if (jwksUri != null && !jwksUri.isBlank()) {
-            dec = NimbusJwtDecoder.withJwkSetUri(jwksUri).build();            // JWKS
+        if (jwksUri != null && !jwksUri.isBlank()) { // JWKS
+            var builder = NimbusJwtDecoder.withJwkSetUri(jwksUri)
+                    .jwsAlgorithm(SignatureAlgorithm.RS256);
+
+            if(jwtRestOps != null) {
+                builder.restOperations(jwtRestOps);
+            }
+            dec = builder.build();
+
         } else if (hsSecret != null && !hsSecret.isBlank()) {
             SecretKey key = new SecretKeySpec(hsSecret.getBytes(StandardCharsets.UTF_8),"HmacSHA512");
             dec = NimbusJwtDecoder.withSecretKey(key).macAlgorithm(MacAlgorithm.HS512).build(); // HS512
@@ -38,13 +51,20 @@ public class JwtDecoderConfig {
             throw new IllegalStateException("No JWKS or HS512 secret configured");
         }
 
-        var withIssuer = JwtValidators.createDefaultWithIssuer(issuer);
-        OAuth2TokenValidator<Jwt> audienceValidator = jwt ->
-                jwt.getAudience()!=null && jwt.getAudience().contains(audience)
-                        ? OAuth2TokenValidatorResult.success()
-                        : OAuth2TokenValidatorResult.failure(new OAuth2Error("invalid_token","bad audience",""));
-
-        dec.setJwtValidator(new DelegatingOAuth2TokenValidator<>(withIssuer, audienceValidator, new JwtTimestampValidator(Duration.ofSeconds(skew))));
+        dec.setJwtValidator(new DelegatingOAuth2TokenValidator<>(new JwtTimestampValidator(Duration.ofSeconds(skew))));
         return dec;
+    }
+
+    @Bean
+    RestOperations jwtRestOps(RestTemplateBuilder b) {
+        Duration timeout = Duration.ofSeconds(2);
+        return b.requestFactory(() -> {
+            SimpleClientHttpRequestFactory f = new SimpleClientHttpRequestFactory();
+            int millis = (int) timeout.toMillis();
+            f.setConnectTimeout(millis);
+            f.setReadTimeout(millis);
+            return f;
+        })
+        .build();
     }
 }
