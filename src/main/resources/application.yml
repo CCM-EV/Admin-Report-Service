@@ -3,6 +3,8 @@ server:
   forward-headers-strategy: native
 
 spring:
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
   task:
     scheduling:
       enabled: true

@@ -16,7 +16,7 @@ public class IssuanceConsumer {
     private final ReportingRepository repo;
     private final MeterRegistry meters;
 
-    @RabbitListener(queues = "admin.credit-issued.v1")
+    @RabbitListener(queues = "admin.issuance.events")
     @Transactional
     public void onIssuanceCreated(CreditIssued evt){
         log.info("Received credit issuance event: {}", evt.event_id());
