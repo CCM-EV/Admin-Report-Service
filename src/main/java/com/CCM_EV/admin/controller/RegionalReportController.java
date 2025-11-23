@@ -207,7 +207,7 @@ public class RegionalReportController {
         // Revenue metrics - USE MATERIALIZED VIEW
         List<Map<String, Object>> revenue = jdbc.queryForList("""
             SELECT 
-                'USD' as currency,
+                'VND' as currency,
                 COALESCE(SUM(revenue), 0) as total_revenue,
                 COALESCE(AVG(avg_unit_price), 0) as avg_price,
                 SUM(trade_count) as trade_count,
